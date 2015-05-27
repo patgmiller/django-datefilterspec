@@ -6,13 +6,37 @@ Has the filter that allows to filter by a date range.
 
 '''
 import datetime
+import six
 from django import forms
 from django.contrib import admin
 from django.contrib.admin.widgets import AdminDateWidget, AdminSplitDateTime
 from django.db import models
-from django.utils.html import format_html
 from django.utils.translation import ugettext as _
 from django.contrib.admin.templatetags.admin_static import static
+
+try:
+    from django.utils.html import format_html
+except ImportError:
+    from django.utils.html import escape
+    from django.utils.safestring import mark_safe
+
+    def format_html(format_string, *args, **kwargs):
+        """
+        Taken from later version of django.utils.html
+
+        Similar to str.format, but passes all arguments through conditional_escape,
+        and calls 'mark_safe' on the result. This function should be used instead
+        of str.format or % interpolation to build up small HTML fragments.
+        """
+        def cond_escape(text):
+            if hasattr(text, '__html__'):
+                return text.__html__()
+            else:
+                return escape(text)
+
+        args_safe = map(conditional_escape, args)
+        kwargs_safe = dict((k, cond_escape(v)) for (k, v) in six.iteritems(kwargs))
+        return mark_safe(format_string.format(*args_safe, **kwargs_safe))
 
 
 class DateRangeFilterAdminSplitDateTime(AdminSplitDateTime):
